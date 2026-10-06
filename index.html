@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Activaciones y Renovaciones | JN CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #25D366;
+      --primary-hover: #1eb857;
+      --bg: #0a0f1a;
+      --box-bg: rgba(13, 20, 38, 0.92);
+      --text: #b4bcd0;
+      --text-white: #ffffff;
+      --border: rgba(37, 211, 102, 0.22);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text-white); }
+    body { overflow-x: hidden; position: relative; }
+
+    /* Fondo dinámico */
+    .animated-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: radial-gradient(circle at 20% 30%, rgba(37, 211, 102, 0.15) 0%, transparent 40%),
+                  radial-gradient(circle at 80% 60%, rgba(125, 74, 255, 0.18) 0%, transparent 42%),
+                  linear-gradient(135deg, #061715 0%, #070b18 50%, #17102e 100%);
+    }
+    .wrap { position: relative; z-index: 1; width: min(100% - 32px, 580px); margin: auto; padding: 40px 0 60px; }
+    
+    .brand { text-align: center; margin-bottom: 20px; }
+    .brand-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 58px; height: 58px; border-radius: 50%;
+      border: 2px solid #eab308; background: #0c1222;
+      font-weight: 800; font-size: 20px; color: #fde047;
+      box-shadow: 0 0 24px rgba(234, 179, 8, 0.35); margin-bottom: 8px;
+    }
+    .brand-title { font-size: 13px; font-weight: 800; letter-spacing: 2px; color: #cbd5e1; }
+
+    .title { text-align: center; font-size: clamp(28px, 6vw, 36px); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px; }
+    .title span { color: var(--primary); }
+    .sub { text-align: center; color: var(--text); font-size: 14px; margin-bottom: 24px; }
+
+    /* Tarjeta principal */
+    .card {
+      background: var(--box-bg); border: 1px solid var(--border);
+      border-radius: 24px; padding: 30px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.65), 0 0 45px rgba(37,211,102,0.08);
+      backdrop-filter: blur(16px); position: relative;
+    }
+
+    /* Pestañas de modo */
+    .tabs { display: flex; gap: 8px; margin-bottom: 22px; background: rgba(255,255,255,0.04); padding: 5px; border-radius: 14px; }
+    .tab-btn {
+      flex: 1; padding: 10px; border: 0; background: transparent; color: var(--text);
+      font-size: 13px; font-weight: 700; border-radius: 10px; cursor: pointer; transition: 0.25s;
+    }
+    .tab-btn.active { background: var(--primary); color: #05140b; box-shadow: 0 4px 14px rgba(37,211,102,0.3); }
+
+    /* Inputs y Formularios */
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: #cbd5e1; margin-bottom: 7px; }
+    .input-wrap { position: relative; }
+    .input-wrap i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 14px; }
+    .field input, .field select {
+      width: 100%; padding: 13px 14px 13px 46px; border-radius: 12px;
+      border: 1px solid var(--border); background: rgba(255, 255, 255, 0.03);
+      color: #fff; font-size: 14px; outline: none; transition: 0.25s;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--primary); background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.15);
+    }
+    .field select option { background: #0c1222; color: #fff; }
+
+    /* Botones */
+    .btn {
+      width: 100%; border: 0; border-radius: 12px; padding: 14px;
+      background: linear-gradient(135deg, var(--primary), #16a34a);
+      color: #05140b; font-size: 15px; font-weight: 800; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: 0.25s; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3);
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(37, 211, 102, 0.45); }
+    .btn-secondary { background: rgba(255,255,255,0.08); color: #fff; box-shadow: none; margin-top: 10px; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.14); }
+
+    /* Resultados de Consulta */
+    .results-box { margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 18px; display: none; }
+    .client-card {
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(37,211,102,0.2);
+      border-radius: 14px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: 0.2s;
+    }
+    .client-card:hover, .client-card.selected { border-color: var(--primary); background: rgba(37,211,102,0.06); }
+    .client-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .client-user { font-weight: 700; font-size: 15px; color: #fff; }
+    .badge { padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .badge-demo { background: rgba(234, 179, 8, 0.2); color: #fde047; }
+    .badge-activo { background: rgba(37, 211, 102, 0.2); color: #4ade80; }
+    .client-expiry { font-size: 12px; color: var(--text); }
+
+    /* Alertas */
+    .alert { padding: 12px 14px; border-radius: 12px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .alert-err { background: #3f1218; border: 1px solid #ef444466; color: #fecaca; }
+    .alert-ok { background: #0c331e; border: 1px solid #22c55e66; color: #bbf7d0; }
+
+    /* Modal de Carga con Reloj */
+    .loading-overlay {
+      position: fixed; inset: 0; z-index: 99; background: rgba(5, 9, 18, 0.88);
+      backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center;
+      flex-direction: column; text-align: center; padding: 20px;
+    }
+    .clock-spinner {
+      font-size: 64px; color: var(--primary);
+      animation: clockTick 2s infinite ease-in-out;
+      margin-bottom: 20px; filter: drop-shadow(0 0 16px rgba(37,211,102,0.5));
+    }
+    @keyframes clockTick {
+      0% { transform: rotate(0deg) scale(0.95); }
+      50% { transform: rotate(180deg) scale(1.05); }
+      100% { transform: rotate(360deg) scale(0.95); }
+    }
+    .loading-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+    .loading-sub { font-size: 14px; color: var(--text); max-width: 320px; }
+
+    /* Pantalla de Éxito */
+    .success-panel { text-align: center; display: none; }
+    .success-icon { font-size: 56px; color: var(--primary); margin-bottom: 16px; }
+    .success-info { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px; margin: 20px 0; text-align: left; font-size: 13px; line-height: 1.8; }
+  </style>
+</head>
+<body>
+
+  <div class="animated-bg"></div>
+
+  <!-- Overlay Procesando con Reloj -->
+  <div class="loading-overlay" id="loadingModal">
+    <i class="fa-solid fa-clock-rotate-left clock-spinner"></i>
+    <h3 class="loading-title">Espera unos segundos...</h3>
+    <p class="loading-sub">Estamos conectando con Wapibot y actualizando la base de datos.</p>
+  </div>
+
+  <main class="wrap">
+    <div class="brand">
+      <div class="brand-badge">JN</div>
+      <div class="brand-title">CRM GESTIÓN</div>
+    </div>
+
+    <h1 class="title">Centro de <span>Activaciones</span></h1>
+    <p class="sub">Consulta, renueva o activa licencias en tiempo real.</p>
+
+    <div class="card">
+      <div class="alert alert-err" id="alertError"></div>
+      <div class="alert alert-ok" id="alertSuccess"></div>
+
+      <!-- Pestañas -->
+      <div class="tabs" id="tabContainer">
+        <button class="tab-btn active" onclick="cambiarTab('consultar')"><i class="fa-solid fa-magnifying-glass"></i> Consultar y Renovar</button>
+        <button class="tab-btn" onclick="cambiarTab('crear')"><i class="fa-solid fa-user-plus"></i> Crear Nuevo</button>
+      </div>
+
+      <!-- SECCIÓN 1: CONSULTAR Y RENOVAR -->
+      <div id="seccionConsultar">
+        <div class="field">
+          <label>Buscar por:</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-filter"></i>
+            <select id="criterioBusqueda">
+              <option value="telefono">Número de WhatsApp (con indicativo)</option>
+              <option value="usuario">Nombre de Usuario</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label id="lblValor">Número de WhatsApp</label>
+          <div class="input-wrap">
+            <i class="fa-brands fa-whatsapp" id="iconoInput"></i>
+            <input type="text" id="valorBusqueda" placeholder="Ej: 573001234567" required>
+          </div>
+        </div>
+
+        <button class="btn" onclick="ejecutarConsulta()"><i class="fa-solid fa-search"></i> Consultar Cliente</button>
+
+        <!-- Bloque de Resultados -->
+        <div class="results-box" id="bloqueResultados">
+          <label style="font-size: 13px; font-weight:700; margin-bottom:10px; display:block;">Usuarios Encontrados:</label>
+          <div id="listaResultados"></div>
+
+          <!-- Selector de Meses para Renovación -->
+          <div id="bloquePlanRenovacion" style="display:none; margin-top:16px;">
+            <div class="field">
+              <label>Tiempo a Renovar:</label>
+              <div class="input-wrap">
+                <i class="fa-solid fa-calendar-days"></i>
+                <select id="mesesRenovacion">
+                  <option value="1">1 Mes</option>
+                  <option value="3">3 Meses (Trimestral)</option>
+                  <option value="6">6 Meses (Semestral)</option>
+                  <option value="12">12 Meses (Anual)</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn" onclick="ejecutarRenovacion()"><i class="fa-solid fa-bolt"></i> Renovar Licencia Seleccionada</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: CREAR NUEVO CLIENTE -->
+      <div id="seccionCrear" style="display:none;">
+        <div class="field">
+          <label>Nombre Completo</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-user"></i>
+            <input type="text" id="nuevoNombre" placeholder="Ej: Carlos Pérez">
+          </div>
+        </div>
+        <div class="field">
+          <label>WhatsApp (con indicativo)</label>
+          <div class="input-wrap">
+            <i class="fa-brands fa-whatsapp"></i>
+            <input type="text" id="nuevoTelefono" placeholder="573001234567">
+          </div>
+        </div>
+        <div class="field">
+          <label>Correo Electrónico</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-envelope"></i>
+            <input type="email" id="nuevoCorreo" placeholder="cliente@correo.com">
+          </div>
+        </div>
+        <div class="field">
+          <label>Contraseña</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="nuevoPass" placeholder="Mínimo 6 caracteres">
+          </div>
+        </div>
+        <div class="field">
+          <label>Plan de Activación</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-calendar-check"></i>
+            <select id="nuevoMeses">
+              <option value="1">1 Mes</option>
+              <option value="3">3 Meses</option>
+              <option value="6">6 Meses</option>
+              <option value="12">12 Meses</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn" onclick="ejecutarCreacion()"><i class="fa-solid fa-user-check"></i> Crear y Activar Licencia</button>
+      </div>
+
+      <!-- PANTALLA DE ÉXITO -->
+      <div class="success-panel" id="panelExito">
+        <i class="fa-solid fa-circle-check success-icon"></i>
+        <h2 style="font-size:22px; font-weight:800; margin-bottom:6px;">¡Operación Completada!</h2>
+        <p style="color:var(--text); font-size:13px;">La cuenta fue procesada y se enviaron las notificaciones correspondientes.</p>
+        <div class="success-info" id="datosExito"></div>
+        <button class="btn btn-secondary" onclick="reiniciarPanel()"><i class="fa-solid fa-arrow-rotate-left"></i> Realizar Otra Operación</button>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // URL del Webhook de Formulario configurado en n8n
+    const WEBHOOK_URL = "https://jnwebpro-n8n.5ddkar.easypanel.host/webhook/gestion-formulario-crm";
+
+    let usuarioSeleccionado = null;
+
+    // Conmutador de criterio (WhatsApp / Usuario)
+    document.getElementById('criterioBusqueda').addEventListener('change', function() {
+      const input = document.getElementById('valorBusqueda');
+      const icono = document.getElementById('iconoInput');
+      const label = document.getElementById('lblValor');
+      if (this.value === 'telefono') {
+        label.textContent = "Número de WhatsApp";
+        input.placeholder = "Ej: 573001234567";
+        icono.className = "fa-brands fa-whatsapp";
+      } else {
+        label.textContent = "Nombre de Usuario";
+        input.placeholder = "Ej: carlos_perez";
+        icono.className = "fa-solid fa-user";
+      }
+    });
+
+    function cambiarTab(modo) {
+      ocultarAlertas();
+      usuarioSeleccionado = null;
+      document.getElementById('bloqueResultados').style.display = 'none';
+      document.getElementById('bloquePlanRenovacion').style.display = 'none';
+
+      const btns = document.querySelectorAll('.tab-btn');
+      btns.forEach(b => b.classList.remove('active'));
+
+      if (modo === 'consultar') {
+        btns[0].classList.add('active');
+        document.getElementById('seccionConsultar').style.display = 'block';
+        document.getElementById('seccionCrear').style.display = 'none';
+      } else {
+        btns[1].classList.add('active');
+        document.getElementById('seccionConsultar').style.display = 'none';
+        document.getElementById('seccionCrear').style.display = 'block';
+      }
+    }
+
+    function mostrarCargando(visible) {
+      document.getElementById('loadingModal').style.display = visible ? 'flex' : 'none';
+    }
+
+    function mostrarError(msg) {
+      const el = document.getElementById('alertError');
+      el.textContent = msg;
+      el.style.display = 'block';
+      document.getElementById('alertSuccess').style.display = 'none';
+    }
+
+    function ocultarAlertas() {
+      document.getElementById('alertError').style.display = 'none';
+      document.getElementById('alertSuccess').style.display = 'none';
+    }
+
+    // 1. Disparo de Consulta
+    async function ejecutarConsulta() {
+      ocultarAlertas();
+      const criterio = document.getElementById('criterioBusqueda').value;
+      const valor = document.getElementById('valorBusqueda').value.trim();
+
+      if (!valor) {
+        mostrarError("Por favor ingresa un dato para realizar la búsqueda.");
+        return;
+      }
+
+      mostrarCargando(true);
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "consultar",
+            criterio: criterio,
+            valor: valor
+          })
+        });
+
+        const data = await res.json();
+        mostrarCargando(false);
+
+        if (!data.success || !data.resultados || data.resultados.length === 0) {
+          mostrarError("No se encontraron coincidencias. Puedes usar la pestaña 'Crear Nuevo'.");
+          document.getElementById('bloqueResultados').style.display = 'none';
+          return;
+        }
+
+        renderResultados(data.resultados);
+      } catch (err) {
+        mostrarCargando(false);
+        mostrarError("Error al consultar el servidor. Intenta de nuevo.");
+      }
+    }
+
+    // 2. Renderizado de usuarios encontrados
+    function renderResultados(clientes) {
+      const contenedor = document.getElementById('listaResultados');
+      contenedor.innerHTML = "";
+      usuarioSeleccionado = null;
+      document.getElementById('bloquePlanRenovacion').style.display = 'none';
+
+      clientes.forEach((cli, idx) => {
+        const esDemo = String(cli.estado).toLowerCase().includes("demo");
+        const badgeClass = esDemo ? "badge-demo" : "badge-activo";
+
+        const card = document.createElement('div');
+        card.className = "client-card";
+        card.innerHTML = `
+          <div class="client-header">
+            <span class="client-user">${cli.usuario}</span>
+            <span class="badge ${badgeClass}">${cli.estado}</span>
+          </div>
+          <div class="client-expiry"><strong>Fecha de Corte:</strong> ${cli.fecha_corte}</div>
+        `;
+
+        card.onclick = () => {
+          document.querySelectorAll('.client-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          usuarioSeleccionado = cli;
+          document.getElementById('bloquePlanRenovacion').style.display = 'block';
+        };
+
+        contenedor.appendChild(card);
+      });
+
+      document.getElementById('bloqueResultados').style.display = 'block';
+    }
+
+    // 3. Disparo de Renovación
+    async function ejecutarRenovacion() {
+      if (!usuarioSeleccionado) {
+        mostrarError("Selecciona primero un usuario para renovar.");
+        return;
+      }
+
+      const meses = parseInt(document.getElementById('mesesRenovacion').value);
+      mostrarCargando(true);
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "ejecutar",
+            tipo: "cuenta",
+            usuario: usuarioSeleccionado.usuario,
+            telefono: usuarioSeleccionado.telefono,
+            meses: meses,
+            detalle_plan: `${meses} mes(es)`
+          })
+        });
+
+        const data = await res.json();
+        mostrarCargando(false);
+
+        if (data.success) {
+          mostrarPantallaExito(data.datos);
+        } else {
+          mostrarError(data.error || "No se pudo renovar la licencia.");
+        }
+      } catch (err) {
+        mostrarCargando(false);
+        mostrarError("Error al procesar la renovación en Wapibot.");
+      }
+    }
+
+    // 4. Disparo de Creación
+    async function ejecutarCreacion() {
+      ocultarAlertas();
+      const nombre = document.getElementById('nuevoNombre').value.trim();
+      const tel = document.getElementById('nuevoTelefono').value.trim();
+      const correo = document.getElementById('nuevoCorreo').value.trim();
+      const pass = document.getElementById('nuevoPass').value.trim();
+      const meses = parseInt(document.getElementById('nuevoMeses').value);
+
+      if (!nombre || !tel || !correo || !pass) {
+        mostrarError("Por favor completa todos los campos para crear la cuenta.");
+        return;
+      }
+
+      mostrarCargando(true);
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "ejecutar",
+            tipo: "cuenta",
+            usuario: nombre,
+            telefono: tel,
+            correo: correo,
+            password: pass,
+            meses: meses,
+            detalle_plan: `${meses} mes(es)`
+          })
+        });
+
+        const data = await res.json();
+        mostrarCargando(false);
+
+        if (data.success) {
+          mostrarPantallaExito(data.datos);
+        } else {
+          mostrarError(data.error || "No se pudo registrar la nueva cuenta.");
+        }
+      } catch (err) {
+        mostrarCargando(false);
+        mostrarError("Error de conexión al intentar crear el cliente.");
+      }
+    }
+
+    function mostrarPantallaExito(datos) {
+      document.getElementById('seccionConsultar').style.display = 'none';
+      document.getElementById('seccionCrear').style.display = 'none';
+      document.getElementById('tabContainer').style.display = 'none';
+
+      const caja = document.getElementById('datosExito');
+      caja.innerHTML = `
+        <strong>Usuario:</strong> ${datos.usuario}<br>
+        <strong>WhatsApp:</strong> +${datos.telefono}<br>
+        <strong>Plan Asignado:</strong> ${datos.plan}<br>
+        <strong>Nuevo Vencimiento:</strong> ${datos.fecha_vencimiento}
+      `;
+
+      document.getElementById('panelExito').style.display = 'block';
+    }
+
+    function reiniciarPanel() {
+      document.getElementById('panelExito').style.display = 'none';
+      document.getElementById('tabContainer').style.display = 'flex';
+      cambiarTab('consultar');
+      document.getElementById('valorBusqueda').value = "";
+    }
+  </script>
+</body>
+</html>
