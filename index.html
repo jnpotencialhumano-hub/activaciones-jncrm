@@ -290,4 +290,338 @@
           <label>Contraseña</label>
           <div class="input-wrap">
             <i class="fa-solid fa-lock"></i>
-            <input type="password" id
+            <input type="password" id="panelPass" placeholder="Mínimo 6 caracteres">
+          </div>
+        </div>
+        <div class="field">
+          <label>Plan de Panel Reseller</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-layer-group"></i>
+            <select id="panelPlan">
+              <option value="1mes_ilimitado">Plan Reseller Mensual (1 Mes - Licencias Ilimitadas)</option>
+              <option value="1ano_500">Plan Reseller Anual (1 Año - Paquete 500 Licencias)</option>
+              <option value="18meses_ilimitado">Plan Reseller Completo (18 Meses - Licencias Ilimitadas)</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-purple" onclick="ejecutarCreacionPanel()"><i class="fa-solid fa-shield-halved"></i> Crear y Activar Panel Reseller</button>
+      </div>
+
+      <!-- PANTALLA DE ÉXITO -->
+      <div class="success-panel" id="panelExito">
+        <i class="fa-solid fa-circle-check success-icon"></i>
+        <h2 style="font-size:22px; font-weight:800; margin-bottom:6px;">¡Operación Completada!</h2>
+        <p style="color:var(--text); font-size:13px;">El registro fue procesado con éxito en el servidor de Wapibot.</p>
+        <div class="success-info" id="datosExito"></div>
+        <button class="btn btn-secondary" onclick="reiniciarPanel()"><i class="fa-solid fa-arrow-rotate-left"></i> Realizar Otra Operación</button>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const WEBHOOK_URL = "https://jnwebpro-n8n.5ddkar.easypanel.host/webhook/gestion-formulario-crm";
+    let usuarioSeleccionado = null;
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(() => console.log("PWA Service Worker registrado con éxito"))
+          .catch((err) => console.log("Fallo al registrar SW:", err));
+      });
+    }
+
+    document.getElementById('criterioBusqueda').addEventListener('change', function() {
+      const input = document.getElementById('valorBusqueda');
+      const icono = document.getElementById('iconoInput');
+      const label = document.getElementById('lblValor');
+      if (this.value === 'telefono') {
+        label.textContent = "Número de WhatsApp";
+        input.placeholder = "Ej: 573001234567";
+        icono.className = "fa-brands fa-whatsapp";
+      } else {
+        label.textContent = "Nombre de Usuario";
+        input.placeholder = "Ej: carlos_perez";
+        icono.className = "fa-solid fa-user";
+      }
+    });
+
+    function cambiarTab(modo) {
+      ocultarAlertas();
+      usuarioSeleccionado = null;
+      document.getElementById('bloqueResultados').style.display = 'none';
+      document.getElementById('bloquePlanRenovacion').style.display = 'none';
+
+      const btns = document.querySelectorAll('.tab-btn');
+      btns.forEach(b => b.classList.remove('active'));
+
+      const secConsultar = document.getElementById('seccionConsultar');
+      const secCrear = document.getElementById('seccionCrear');
+      const secPanel = document.getElementById('seccionPanel');
+
+      secConsultar.style.display = 'none';
+      secCrear.style.display = 'none';
+      secPanel.style.display = 'none';
+
+      if (modo === 'consultar') {
+        btns[0].classList.add('active');
+        secConsultar.style.display = 'block';
+      } else if (modo === 'crear') {
+        btns[1].classList.add('active');
+        secCrear.style.display = 'block';
+      } else if (modo === 'panel') {
+        btns[2].classList.add('active');
+        secPanel.style.display = 'block';
+      }
+    }
+
+    function mostrarCargando(visible, texto = "Estamos conectando con Wapibot y procesando la solicitud.") {
+      document.getElementById('loadingTexto').innerText = texto;
+      document.getElementById('loadingModal').style.display = visible ? 'flex' : 'none';
+    }
+
+    function mostrarError(msg) {
+      const el = document.getElementById('alertError');
+      el.textContent = msg;
+      el.style.display = 'block';
+      document.getElementById('alertSuccess').style.display = 'none';
+    }
+
+    function ocultarAlertas() {
+      document.getElementById('alertError').style.display = 'none';
+      document.getElementById('alertSuccess').style.display = 'none';
+    }
+
+    async function ejecutarConsulta() {
+      ocultarAlertas();
+      const criterio = document.getElementById('criterioBusqueda').value;
+      const valor = document.getElementById('valorBusqueda').value.trim();
+
+      if (!valor) {
+        mostrarError("Por favor ingresa un dato para realizar la búsqueda.");
+        return;
+      }
+
+      mostrarCargando(true, "Consultando usuarios registrados en Wapibot...");
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "consultar",
+            criterio: criterio,
+            valor: valor
+          })
+        });
+
+        const data = await res.json();
+        mostrarCargando(false);
+
+        if (!data.success || !data.resultados || data.resultados.length === 0) {
+          mostrarError("No se encontraron coincidencias. Puedes usar la pestaña 'Crear Licencia'.");
+          document.getElementById('bloqueResultados').style.display = 'none';
+          return;
+        }
+
+        renderResultados(data.resultados);
+      } catch (err) {
+        mostrarCargando(false);
+        mostrarError("Error al consultar el servidor. Intenta de nuevo.");
+      }
+    }
+
+    function renderResultados(clientes) {
+      const contenedor = document.getElementById('listaResultados');
+      contenedor.innerHTML = "";
+      usuarioSeleccionado = null;
+      document.getElementById('bloquePlanRenovacion').style.display = 'none';
+
+      clientes.forEach((cli) => {
+        const esDemo = String(cli.estado).toLowerCase().includes("demo");
+        const badgeClass = esDemo ? "badge-demo" : "badge-activo";
+
+        const card = document.createElement('div');
+        card.className = "client-card";
+        card.innerHTML = `
+          <div class="client-header">
+            <span class="client-user">${cli.usuario}</span>
+            <span class="badge ${badgeClass}">${cli.estado}</span>
+          </div>
+          <div class="client-expiry"><strong>Fecha de Corte:</strong> ${cli.fecha_corte}</div>
+        `;
+
+        card.onclick = () => {
+          document.querySelectorAll('.client-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          usuarioSeleccionado = cli;
+          document.getElementById('bloquePlanRenovacion').style.display = 'block';
+        };
+
+        contenedor.appendChild(card);
+      });
+
+      document.getElementById('bloqueResultados').style.display = 'block';
+    }
+
+    async function ejecutarRenovacion() {
+      if (!usuarioSeleccionado) {
+        mostrarError("Selecciona primero un usuario para renovar.");
+        return;
+      }
+
+      const meses = parseInt(document.getElementById('mesesRenovacion').value);
+      mostrarCargando(true, "Renovando licencia y actualizando fecha de corte...");
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "ejecutar",
+            tipo: "cuenta",
+            usuario: usuarioSeleccionado.usuario,
+            telefono: usuarioSeleccionado.telefono,
+            meses: meses,
+            detalle_plan: `${meses} mes(es)`
+          })
+        });
+
+        const data = await res.json();
+        mostrarCargando(false);
+
+        if (data.success) {
+          mostrarPantallaExito(data.datos);
+        } else {
+          mostrarError(data.error || "No se pudo renovar la licencia.");
+        }
+      } catch (err) {
+        mostrarCargando(false);
+        mostrarError("Error al procesar la renovación en Wapibot.");
+      }
+    }
+
+    async function ejecutarCreacion() {
+      ocultarAlertas();
+      const nombre = document.getElementById('nuevoNombre').value.trim();
+      const tel = document.getElementById('nuevoTelefono').value.trim();
+      const correo = document.getElementById('nuevoCorreo').value.trim();
+      const pass = document.getElementById('nuevoPass').value.trim();
+      const meses = parseInt(document.getElementById('nuevoMeses').value);
+
+      if (!nombre || !tel || !correo || !pass) {
+        mostrarError("Por favor completa todos los campos para crear la licencia.");
+        return;
+      }
+
+      mostrarCargando(true, "Creando y activando la licencia en Wapibot...");
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "ejecutar",
+            tipo: "cuenta",
+            usuario: nombre,
+            telefono: tel,
+            correo: correo,
+            password: pass,
+            meses: meses,
+            detalle_plan: `${meses} mes(es)`
+          })
+        });
+
+        const data = await res.json();
+        mostrarCargando(false);
+
+        if (data.success) {
+          mostrarPantallaExito(data.datos);
+        } else {
+          mostrarError(data.error || "No se pudo registrar la nueva cuenta.");
+        }
+      } catch (err) {
+        mostrarCargando(false);
+        mostrarError("Error de conexión al intentar crear el cliente.");
+      }
+    }
+
+    // CREACIÓN DE PANEL RESELLER
+    async function ejecutarCreacionPanel() {
+      ocultarAlertas();
+      const usuario = document.getElementById('panelUsuario').value.trim();
+      const tel = document.getElementById('panelTelefono').value.trim();
+      const correo = document.getElementById('panelCorreo').value.trim();
+      const pass = document.getElementById('panelPass').value.trim();
+      const planSelect = document.getElementById('panelPlan');
+      const planValor = planSelect.value;
+      const planTexto = planSelect.options[planSelect.selectedIndex].text;
+
+      if (!usuario || !tel || !correo || !pass) {
+        mostrarError("Por favor completa todos los campos para crear el panel reseller.");
+        return;
+      }
+
+      mostrarCargando(true, "Creando panel reseller y asignando paquete de licencias...");
+
+      try {
+        const res = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accion: "ejecutar",
+            tipo: "panel",
+            usuario: usuario,
+            telefono: tel,
+            correo: correo,
+            password: pass,
+            plan_panel: planValor,
+            detalle_plan: planTexto
+          })
+        });
+
+        const data = await res.json();
+        mostrarCargando(false);
+
+        if (data.success) {
+          mostrarPantallaExito(data.datos);
+        } else {
+          mostrarError(data.error || "No se pudo crear el panel reseller.");
+        }
+      } catch (err) {
+        mostrarCargando(false);
+        mostrarError("Error de comunicación al registrar el panel reseller.");
+      }
+    }
+
+    function mostrarPantallaExito(datos) {
+      document.getElementById('seccionConsultar').style.display = 'none';
+      document.getElementById('seccionCrear').style.display = 'none';
+      document.getElementById('seccionPanel').style.display = 'none';
+      document.getElementById('tabContainer').style.display = 'none';
+
+      const caja = document.getElementById('datosExito');
+      caja.innerHTML = `
+        <strong>Usuario / Reseller:</strong> ${datos.usuario}<br>
+        <strong>WhatsApp:</strong> +${datos.telefono}<br>
+        <strong>Plan Asignado:</strong> ${datos.plan || datos.detalle_plan}<br>
+        ${datos.fecha_vencimiento ? `<strong>Vencimiento:</strong> ${datos.fecha_vencimiento}<br>` : ''}
+        ${datos.licencias ? `<strong>Licencias Asignadas:</strong> ${datos.licencias}<br>` : ''}
+      `;
+
+      document.getElementById('panelExito').style.display = 'block';
+    }
+
+    function reiniciarPanel() {
+      document.getElementById('panelExito').style.display = 'none';
+      document.getElementById('tabContainer').style.display = 'flex';
+      cambiarTab('consultar');
+      document.getElementById('valorBusqueda').value = "";
+      document.getElementById('panelUsuario').value = "";
+      document.getElementById('panelTelefono').value = "";
+      document.getElementById('panelCorreo').value = "";
+      document.getElementById('panelPass').value = "";
+    }
+  </script>
+</body>
+</html>
